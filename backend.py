@@ -144,6 +144,39 @@ def upload_file():
         'file_url': f"{request.host_url}file/{last_id}"
     }), 200
 
+
+# POST /location → Save latitude & longitude
+@app.route("/location", methods=["POST"])
+def save_location():
+    data = request.get_json()
+    if not data or "latitude" not in data or "longitude" not in data:
+        return jsonify({"error": "Latitude and longitude required"}), 400
+
+    latitude = data["latitude"]
+    longitude = data["longitude"]
+
+    # Save location to DB (optional)
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute(
+        '''
+        INSERT INTO uploads (filename, file_type, file_path, geotag, time_sent)
+        VALUES (?, ?, ?, ?, ?)
+        ''',
+        ("location", "location", "N/A", f"{latitude},{longitude}", datetime.now().isoformat())
+    )
+    conn.commit()
+    last_id = c.lastrowid
+    conn.close()
+
+    return jsonify({
+        "message": "Location saved successfully",
+        "id": last_id,
+        "latitude": latitude,
+        "longitude": longitude
+    }), 200
+
+
 # GET /uploads → List all uploads
 @app.route('/uploads', methods=['GET'])
 def get_uploads():
@@ -198,3 +231,6 @@ def home():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
+
+
